@@ -16,10 +16,28 @@ The wizard waits indefinitely for the user to press Enter. They can complete *an
 
 ### Auth requires a fresh session each time (no persistent cookies)
 
-If the app sets short-lived (< 1h) session cookies with no refresh mechanism, baseline auth won't survive a 10-minute crawl. Options:
+If the app sets short-lived (< 1h) session cookies, the crawl may outlive the session. Options (in order of preference):
 
-1. Increase the crawl scope so the auth lasts (cut `--max-pages`).
-2. Use a long-lived service account / API token instead. Tell the user — there is no programmatic option in the tester for "auth headers per request" yet.
+1. **`--auth-refresh-url`** — pass the URL the SPA calls for token refresh (e.g. `--auth-refresh-url https://your-app/auth/refresh`). The crawler hits it before every navigation so the session stays warm. This is the canonical fix.
+2. Reduce crawl scope so the auth lasts (cut `--max-pages`).
+3. Use a long-lived service account / API token instead. Save the rotation URL to learnings so future runs use it automatically.
+
+### When all your findings are about /login (the post-mortem anti-pattern)
+
+**Symptom:** The report has ~100 visual findings, all suspiciously similar. Screenshots all show the same login hero. CLS regression appears on every route. "7 unclickable interactive elements" repeated 60 times.
+
+**Cause:** Mid-crawl auth loss. The session rotated, every navigation got 401 + SPA redirected to `/login`, every audit ran against the login fallback. The report is garbage.
+
+**How to detect (v0.2+ does it automatically):**
+- The crawler watches for 401 responses and final-URL matching `/login|/signin|/auth` on the redirect.
+- Affected routes get a `type=auth severity=high` finding ("Auth lost while crawling /foo") and ARE NOT audited further.
+- The header line should say `N auth-lost` non-zero.
+
+**If auth was lost on every page:**
+1. Re-run `tester auth <url>` to refresh `storageState.json`.
+2. Pass `--auth-refresh-url` if the app uses `/auth/refresh`.
+3. Re-run the audit. Compare the new run's `auth-lost` count — should be 0.
+4. If still > 0: the issue is server-side. Either the token TTL is too short (lengthen it server-side) or the user agent is being blocked (whitelist `tester-bot/0.1`).
 
 ### Auth modal blocks the page on every load
 
