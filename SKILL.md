@@ -80,11 +80,22 @@ If any of these fails mid-crawl, the report will be full of "horizontal overflow
 ### Phase 1 — Identify the target
 Ask for URL if not provided. Otherwise pull from CLAUDE.md / README / package.json `homepage`.
 
-### Phase 2 — Recall project learnings
+### Phase 2 — Recall project state (config file + server learnings + sticky prefs)
+
+Three places to check, in order:
+
 ```bash
+# 1) Local config file in the user's repo
+find . -maxdepth 6 -name ".tester.config.*" 2>/dev/null | head -1
+# 2) Server-stored learnings (cross-machine)
 ./scripts/run-tester.sh learnings <url>
+# 3) Sticky per-project user prefs (last depth / destination / viewport)
+./scripts/run-tester.sh prefs --url <url> --json
 ```
-Returns the saved auth refresh URL, seed paths, notable selectors, known issues. Pass these to the run.
+
+If `.tester.config.*` exists, `tester run` picks it up automatically — you don't pass `--config`. CLI flags still override.
+
+If `prefs.json` shows `lastDepth=deep` and the user's wording is ambiguous, default to `deep` and confirm in one sentence — they probably want what they had last time.
 
 ### Phase 3 — Decide
 Use § Intent detection. If intent is clear, confirm in one sentence. Only fall back to the 3-question menu when nothing in the prompt signals depth/destination.
@@ -97,14 +108,18 @@ Use § Intent detection. If intent is clear, confirm in one sentence. Only fall 
 
 ### Phase 5 — Run
 ```bash
-./scripts/run-tester.sh run <url> \
+./scripts/run-tester.sh run --url <url> \
   [--deep | --quick | --max-pages N --max-depth N] \
   [--viewport mobile|tablet|desktop|WxH] \
   [--seed /admin/x ...] \
   [--auth-refresh-url https://app/auth/refresh] \
   [--phase-timeout 600000] \
-  [--share | --no-share]
+  [--stable-only] \
+  [--config path/to/.tester.config.js] \
+  [--share]
 ```
+
+For a "fast re-run after a small CSS fix" pattern, add `--stable-only`. Routes that match the previous run's `hashSignature` AND are within `--freshness-days` get skipped entirely — no navigation, no audit, just counted.
 
 Watch the streamed log: each phase emits a header (`▸`) + heartbeats (`↻ ... still running (Ns elapsed)`) every 15s. If a phase has been silent for >30s, that's a bug — surface it.
 
@@ -119,6 +134,8 @@ If the sentinel is missing, the run was killed mid-phase. Tell the user, do NOT 
 - Then critical → high → medium → low.
 - Quote titles verbatim. Link screenshots (relative paths inside the report dir).
 - If the user chose dashboard, surface the share link prominently.
+
+**For a polished offline viewer:** `tester report --url <url> --open` builds a single-file HTML with screenshots base64-inlined and opens it in the default browser. Use this when the user wants to share the report by email/Slack without uploading to the dashboard.
 
 ### Phase 8 — Persist learnings
 If this run discovered a working auth refresh URL, useful seeds, or a critical selector pattern, save it:
@@ -166,9 +183,10 @@ Before recommending a fix from the report, sanity-check these:
 - `playbooks/performance.md` — Core Web Vitals thresholds, INP gotchas
 - `playbooks/visual.md` — visual heuristics, hidden-ancestor + gradient handling
 - `playbooks/auth.md` — debugging storageState wizard, the "all findings are about /login" anti-pattern
-- `playbooks/incremental.md` — re-run diff vs baseline
+- `playbooks/incremental.md` — re-run diff vs baseline, `--stable-only` mode
 - `playbooks/sinks.md` — GitHub Issues / Linear / Slack dispatch
 - `playbooks/dashboard.md` — when to upload, what gets sent
+- `playbooks/config-file.md` — .tester.config.js shape, precedence, pairing with prefs
 - `playbooks/failure-modes.md` — the full post-mortem rules (read before adding new audit features)
 
 ## Scripts

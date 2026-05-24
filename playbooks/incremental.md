@@ -11,9 +11,13 @@
 
 | Flag | Behavior |
 |---|---|
-| (default) | Incremental. Skip visual audit on routes unchanged within freshness window. |
+| (default) | Incremental. Visit every route; skip the visual audit on routes whose hashSignature matches AND are within freshness. |
 | `--full` | Force-audit every route regardless of change. Use after a big refactor or before a release. |
+| `--deep` | Implies `--full`. |
+| `--stable-only` | **Skip the route ENTIRELY** if it's known + fresh + unchanged. No navigation, no audit, just counted. Much faster than the default incremental mode, but won't catch a route whose URL works the same but rendered content changed in a way the previous hashSignature missed. |
 | `--freshness-days N` | Change the window (default 7). For fast-moving sites set to 1; for stable docs sites set to 30. |
+
+**`--stable-only` use case:** you fixed CSS on `/admin/users` and want to re-run only that route's audit, not all 60 routes. Run with `--stable-only` and only routes whose content changed (or whose freshness expired) get audited. Combine with `--seed /admin/users` to force-audit the route you actually want.
 
 ## When to expect what
 
