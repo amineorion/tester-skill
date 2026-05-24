@@ -109,7 +109,7 @@ case "${1:-}" in
   api-health)
     curl -fsS "$API_URL/health"
     ;;
-  init|run|report|auth|list|sink|*)
+  feedback|prefs|init|run|report|auth|list|sink|*)
     exec $CLI "$@"
     ;;
 esac

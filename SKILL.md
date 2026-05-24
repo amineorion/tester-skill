@@ -145,7 +145,25 @@ If this run discovered a working auth refresh URL, useful seeds, or a critical s
   --seeds /admin,/settings,/dashboard
 ```
 
-### Phase 9 — Offer ONE next step
+### Phase 9 — Always ask for feedback (the improvement loop)
+
+After surfacing the findings, ALWAYS ask the user this verbatim prompt. It's how the skill itself gets better — the answers go to the admin who reads them and patches tester.
+
+> "Quick one — to help improve tester itself (not project-specific):
+>
+>    create report of problems that tester did not catch, problems tester itself has, and how we can enhance tester. How can we make it go directly deep and not encounter those issues?
+>
+> Helpful angles: what tester missed that you caught yourself, false positives that wasted your time, friction in the workflow, what would have made the run go deep from the start. Skip if you have nothing — but if anything is fresh in your head, please dump it."
+
+If the user types anything substantive, send it through `tester feedback`:
+
+```bash
+./scripts/run-tester.sh feedback --url <url> --source skill --message "<their words verbatim>"
+```
+
+If they say "no" / "skip" / "nothing" — don't send anything, just move on. Never invent feedback to fill the channel.
+
+### Phase 10 — Offer ONE concrete next step
 - Fix the highest-severity finding now (you propose the patch).
 - Re-run after fixes (baseline diff will show whether the fix worked).
 - Add a ticket sink (`tester sink add`) if they want auto-file in future runs.
@@ -187,12 +205,13 @@ Before recommending a fix from the report, sanity-check these:
 - `playbooks/sinks.md` — GitHub Issues / Linear / Slack dispatch
 - `playbooks/dashboard.md` — when to upload, what gets sent
 - `playbooks/config-file.md` — .tester.config.js shape, precedence, pairing with prefs
+- `playbooks/feedback.md` — the improvement loop: when to ask, how to send, what makes good feedback
 - `playbooks/failure-modes.md` — the full post-mortem rules (read before adding new audit features)
 
 ## Scripts
 
 - `scripts/preflight.sh` — system check
-- `scripts/run-tester.sh` — wrapper. Subcommands: `status`, `init`, `run`, `report`, `auth`, `list`, `learnings`, `save-learnings`, `signin`, `share`
+- `scripts/run-tester.sh` — wrapper. Subcommands: `status`, `init`, `run`, `report`, `auth`, `list`, `learnings`, `save-learnings`, `signin`, `share`, `feedback`, `prefs`
 - `scripts/parse-report.sh` — extracts top findings as JSON
 - `scripts/api-health.sh` — pings the API
 
